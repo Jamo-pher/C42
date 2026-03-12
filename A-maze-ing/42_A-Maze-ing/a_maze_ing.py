@@ -5,13 +5,13 @@ import random
 
 # ANSI color codes
 COLORS = [
-    "\033[31m",  # red
-    "\033[32m",  # green
-    "\033[33m",  # yellow
-    "\033[34m",  # blue
-    "\033[35m",  # magenta
-    "\033[36m",  # cyan
-    "\033[37m",  # white
+    "\033[31m",
+    "\033[32m",
+    "\033[33m",
+    "\033[34m",
+    "\033[35m",
+    "\033[36m",
+    "\033[37m",
 ]
 RESET = "\033[0m"
 
@@ -22,9 +22,10 @@ def parser(filename: str) -> Dict[str, str]:
     try:
         with open(filename, 'r') as file:
             for line in file:
+                line = line.strip()
                 if line.startswith('#') or not line:
                     continue
-                key, value = line.strip().split('=', 1)
+                key, value = line.split('=', 1)
                 config[key] = value
     except FileNotFoundError:
         print(f"Error: Configuration file {filename} not found!")
@@ -41,7 +42,7 @@ def parse_tuple(value: str) -> Tuple[int, int]:
     return int(x), int(y)
 
 
-def main():
+def main() -> None:
     if len(sys.argv) != 2:
         print("Usage: python3 a_maze_ing.py config.txt")
         sys.exit(1)
@@ -54,7 +55,7 @@ def main():
         height = int(config['HEIGHT'])
         entry = parse_tuple(config['ENTRY'])
         exit = parse_tuple(config['EXIT'])
-        output_file = config['OUTPUT_FILE']
+        output_file = config.get('OUTPUT_FILE', 'maze.txt')
         perfect = (config['PERFECT'].strip().upper() == "TRUE" if
                    config.get('PERFECT') else None)
         seed = int(config['SEED']) if config.get('SEED') else None
@@ -63,11 +64,13 @@ def main():
     except Exception as error:
         print(f"Invalid configuration values: {error}")
         print("Switching to default values... (10x10)")
+        output_file = config.get('OUTPUT_FILE', 'maze.txt')
         maze = MazeGenerator(10, 10, (0, 0), (9, 9), None, None, output_file)
 
     maze.generate()
     maze.solve()
     show_solution = False
+    unicode = False
     wall_color = "\033[37m"
     reserved_color = "\033[34m"
     print(maze.render_ascii(show_solution, wall_color, reserved_color))
@@ -78,25 +81,35 @@ def main():
         print("1. Toggle solution path")
         print("2. Change wall color")
         print("3. Change '42' pattern color")
-        print("4. Generate new maze")
-        print("5. Exit")
+        print("4. change maze rendering style (ASCII/Unicode)")
+        print("5. Generate new maze")
+        print("6. Exit")
 
         choice = input("Enter your choice: ")
         if choice == '1':
             show_solution = not show_solution
-            print(maze.render_ascii(show_solution, wall_color, reserved_color))
+            print(maze.render_ascii(show_solution, wall_color, reserved_color,
+                                    unicode=unicode))
         elif choice == '2':
             wall_color = random.choice(COLORS)
-            print(maze.render_ascii(show_solution, wall_color, reserved_color))
+            print(maze.render_ascii(show_solution, wall_color, reserved_color,
+                                    unicode=unicode))
         elif choice == '3':
             reserved_color = random.choice(COLORS)
-            print(maze.render_ascii(show_solution, wall_color, reserved_color))
+            print(maze.render_ascii(show_solution, wall_color, reserved_color,
+                                    unicode=unicode))
         elif choice == '4':
-            seed = random.seed()
-            maze.generate()  # Regenerate maze with different seed
-            maze.solve()
-            print(maze.render_ascii(show_solution, wall_color, reserved_color))
+            unicode = not unicode
+            print(maze.render_ascii(show_solution, wall_color, reserved_color,
+                                    unicode=unicode))
         elif choice == '5':
+            seed = random.seed()
+            maze.generate()
+            maze.solve()
+            maze.save_to_file(output_file)
+            print(maze.render_ascii(show_solution, wall_color, reserved_color,
+                                    unicode=unicode))
+        elif choice == '6':
             print("Exiting...")
             break
         else:
